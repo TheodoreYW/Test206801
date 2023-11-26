@@ -1,29 +1,36 @@
-const express = require('express');
-const http = require('http');
-const socketIo = require('socket.io');
-const path = require('path');
+const express = require("express");
+const http = require("http");
+const socketIo = require("socket.io");
+const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
+const userNames = {};
+
 // Serve static files
 app.use(express.static(__dirname));
 
 // Socket.io events
-io.on('connection', (socket) => {
-  console.log('a user connected');
+io.on("connection", (socket) => {
+  console.log("a user connected");
 
   // Broadcast to all clients when a user joins
-  socket.broadcast.emit('user joined', 'User');
-
-  socket.on('chat message', (msg) => {
-    io.emit('chat message', msg);
+  socket.on("user joined", (username) => {
+    userNames[socket.id] = username;
+    socket.broadcast.emit("user joined", username);
   });
 
-  socket.on('disconnect', () => {
-    console.log('user disconnected');
-    io.emit('user left', 'User');
+  socket.on("chat message", (msgData) => {
+    io.emit("chat message", msgData);
+  });
+
+  socket.on("disconnect", () => {
+    const username = userNames[socket.id] || "A user";
+    console.log(`${username} disconnected`);
+    io.emit("user left", username);
+    delete userNames[socket.id];
   });
 });
 
